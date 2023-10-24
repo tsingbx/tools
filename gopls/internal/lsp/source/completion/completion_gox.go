@@ -11,6 +11,7 @@ import (
 	"go/types"
 	"log"
 	"math"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -287,7 +288,7 @@ func GopCompletion(ctx context.Context, snapshot source.Snapshot, fh source.File
 	defer done()
 
 	pkg, pgf, err := source.NarrowestPackageForGopFile(ctx, snapshot, fh.URI())
-	if err != nil || pgf.File.Package == token.NoPos {
+	if err != nil || (pgf.File.Package == token.NoPos && pkg.GetTypes().Name() != "main") {
 		// If we can't parse this file or find position for the package
 		// keyword, it may be missing a package declaration. Try offering
 		// suggestions for the package declaration.
@@ -309,6 +310,9 @@ func GopCompletion(ctx context.Context, snapshot source.Snapshot, fh source.File
 	path, _ := astutil.PathEnclosingInterval(pgf.File, pos-1, pos-1)
 	if path == nil {
 		return nil, nil, fmt.Errorf("cannot find node enclosing position")
+	}
+	if goxls.DbgCompletion {
+		log.Printf("GopCompletion PathEnclosingInterval: %T\n", path[0])
 	}
 
 	// Check if completion at this position is valid. If not, return early.
@@ -539,6 +543,9 @@ func (c *gopCompleter) collectCompletions(ctx context.Context) error {
 		return nil
 	}
 
+	if goxls.DbgCompletion {
+		log.Println("collectCompletions: path", reflect.TypeOf(c.path[0]))
+	}
 	switch n := c.path[0].(type) {
 	case *ast.Ident:
 		if c.file.Name == n {
@@ -1041,8 +1048,16 @@ func (c *gopCompleter) selector(ctx context.Context, sel *ast.SelectorExpr) erro
 		log.Println("gopCompleter.selector:", sel.X, ok, "type:", tv.Type)
 	}
 	if ok {
-		c.methodsAndFields(tv.Type, tv.Addressable(), nil, c.deepState.enqueue)
+		// goxls: assume tv.Addressable() => true
+		// c.methodsAndFields(tv.Type, tv.Addressable(), nil, c.deepState.enqueue)
+		c.methodsAndFields(tv.Type, true, nil, c.deepState.enqueue)
+		if goxls.DbgCompletion {
+			log.Println("gopCompleter methodsAndFields:", len(c.items))
+		}
 		c.addPostfixSnippetCandidates(ctx, sel)
+		if goxls.DbgCompletion {
+			log.Println("gopCompleter addPostfixSnippetCandidates:", len(c.items))
+		}
 		return nil
 	}
 
