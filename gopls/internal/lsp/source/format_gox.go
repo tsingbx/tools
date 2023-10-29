@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strings"
 
 	"path/filepath"
 
@@ -176,27 +175,31 @@ func gopComputeFixEdits(snapshot Snapshot, pgf *ParsedGopFile, options *imports.
 	}
 	// goxls: left maybe empty in Go+
 	// extra := !strings.Contains(left, "\n") // one line may have more than imports
-	extra := (left != "") && !strings.Contains(left, "\n")
-	if extra {
-		left = string(pgf.Src)
-	}
-	if len(left) > 0 && left[len(left)-1] != '\n' {
-		left += "\n"
-	}
+
+	/*
+		extra := (left != "") && !strings.Contains(left, "\n")
+		if extra {
+			left = string(pgf.Src)
+		}
+			if len(left) > 0 && left[len(left)-1] != '\n' {
+				left += "\n"
+			}*/
 	// Apply the fixes and re-parse the file so that we can locate the
 	// new imports.
-	flags := parser.ImportsOnly
-	if extra {
-		// used all of origData above, use all of it here too
-		flags = 0
-	}
-	fixedData, err := imports.ApplyFixes(fixes, "", pgf.Src, options, flags)
+	/*
+		flags := parser.ImportsOnly
+		if extra {
+			// used all of origData above, use all of it here too
+			flags = 0
+		}*/
+	fixedData, err := imports.ApplyFixes(fixes, "", pgf.Src, options, parser.ImportsOnly)
 	if err != nil {
 		return nil, err
 	}
-	if fixedData == nil || fixedData[len(fixedData)-1] != '\n' {
-		fixedData = append(fixedData, '\n') // ApplyFixes may miss the newline, go figure.
-	}
+	/*
+		if fixedData == nil || fixedData[len(fixedData)-1] != '\n' {
+			fixedData = append(fixedData, '\n') // ApplyFixes may miss the newline, go figure.
+		}*/
 	edits := snapshot.View().Options().ComputeEdits(left, string(fixedData))
 	return protocolEditsFromSource([]byte(left), edits)
 }
