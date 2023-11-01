@@ -114,7 +114,7 @@ func AddNamedImport(fset *token.FileSet, f *ast.File, name, path string) (added 
 			file := fset.File(pos)
 			pkgLine := file.Line(pos)
 			for _, c := range f.Comments {
-				if file.Line(c.Pos()) > pkgLine {
+				if file.Line(c.Pos()) > pkgLine && f.HasPkgDecl() {
 					break
 				}
 				// +2 for a blank line
