@@ -108,12 +108,6 @@ func ApplyFixes(fixes []*ImportFix, filename string, src []byte, opt *Options, e
 	// Apply the fixes to the file.
 	apply(fileSet, file, fixes)
 
-	// Remove package main by tsingbx
-	if file.HasPkgDecl() && file.Name.Name == "main" && isGopFile(filename) {
-		file.NoPkgDecl = true
-	}
-	// end Remove package main
-
 	return formatFile(fileSet, file, src, nil, opt)
 }
 
@@ -124,6 +118,15 @@ func ApplyFixes(fixes []*ImportFix, filename string, src []byte, opt *Options, e
 // with the original source (formatFile's src parameter) and the
 // formatted file, and returns the postpocessed result.
 func formatFile(fset *token.FileSet, file *ast.File, src []byte, adjust func(orig []byte, src []byte) []byte, opt *Options) ([]byte, error) {
+
+	// Remove package main by tsingbx
+	tokenFile := fset.File(file.Pos())
+	filename := tokenFile.Name()
+	if file.HasPkgDecl() && file.Name.Name == "main" && isGopFile(filename) {
+		file.NoPkgDecl = true
+	}
+	// end Remove package main
+
 	mergeImports(file)
 	sortImports(opt.LocalPrefix, fset.File(file.Pos()), file)
 	var spacesBefore []string // import paths we need spaces before
