@@ -183,6 +183,7 @@ func gopComputeFixEdits(snapshot Snapshot, pgf *ParsedGopFile, options *imports.
 	if len(left) > 0 && left[len(left)-1] != '\n' {
 		left += "\n"
 	}
+
 	// Apply the fixes and re-parse the file so that we can locate the
 	// new imports.
 	flags := parser.ImportsOnly
@@ -190,7 +191,7 @@ func gopComputeFixEdits(snapshot Snapshot, pgf *ParsedGopFile, options *imports.
 		// used all of origData above, use all of it here too
 		flags = 0
 	}
-	fixedData, err := imports.ApplyFixes(fixes, "", pgf.Src, options, flags)
+	fixedData, err := imports.ApplyFixes(fixes, pgf.URI.Filename(), pgf.Src, options, flags)
 	if err != nil {
 		return nil, err
 	}
@@ -288,6 +289,7 @@ func gopImportPrefix(src []byte) (string, error) {
 	if importEnd > len(src) {
 		importEnd = len(src)
 	}
+
 	return string(src[:importEnd]), nil
 }
 

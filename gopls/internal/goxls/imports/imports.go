@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -20,6 +21,7 @@ import (
 	"github.com/goplus/gop/printer"
 	"github.com/goplus/gop/token"
 	"golang.org/x/tools/gopls/internal/goxls/astutil"
+	"golang.org/x/tools/gopls/internal/goxls/goputil"
 	"golang.org/x/tools/internal/event"
 )
 
@@ -77,6 +79,11 @@ func FixImports(ctx context.Context, filename string, src []byte, opt *Options) 
 	return getFixes(ctx, fileSet, file, filename, opt.Env)
 }
 
+func isGopFile(fileName string) bool {
+	fext := filepath.Ext(fileName)
+	return goputil.FileKind(fext) == goputil.FileGopNormal
+}
+
 // ApplyFixes applies all of the fixes to the file and formats it. extraMode
 // is added in when parsing the file. src and opts must be specified, but no
 // env is needed.
@@ -100,6 +107,12 @@ func ApplyFixes(fixes []*ImportFix, filename string, src []byte, opt *Options, e
 
 	// Apply the fixes to the file.
 	apply(fileSet, file, fixes)
+
+	// Remove package main by tsingbx
+	if file.HasPkgDecl() && file.Name.Name == "main" && isGopFile(filename) {
+		file.NoPkgDecl = true
+	}
+	// end Remove package main
 
 	return formatFile(fileSet, file, src, nil, opt)
 }
