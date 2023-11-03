@@ -237,6 +237,14 @@ func DeleteNamedImport(fset *token.FileSet, f *ast.File, name, path string) (del
 			// If this was the last import spec in this decl,
 			// delete the decl, too.
 			if len(gen.Specs) == 0 {
+				// delete gen comment
+				for _, cg := range f.Comments {
+					// Found comment on the same line as the import spec.
+					if fset.Position(cg.End()).Line == fset.Position(gen.TokPos).Line {
+						delcomments = append(delcomments, cg)
+						break
+					}
+				}
 				copy(f.Decls[i:], f.Decls[i+1:])
 				f.Decls = f.Decls[:len(f.Decls)-1]
 				i--
