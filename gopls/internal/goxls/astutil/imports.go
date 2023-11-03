@@ -226,7 +226,6 @@ func DeleteNamedImport(fset *token.FileSet, f *ast.File, name, path string) (del
 			if importName(impspec) != name || importPath(impspec) != path {
 				continue
 			}
-
 			// We found an import spec that imports path.
 			// Delete it.
 			delspecs = append(delspecs, impspec)
@@ -237,9 +236,8 @@ func DeleteNamedImport(fset *token.FileSet, f *ast.File, name, path string) (del
 			// If this was the last import spec in this decl,
 			// delete the decl, too.
 			if len(gen.Specs) == 0 {
-				// delete gen comment
+				// remove comment at the same line with import "fmt"
 				for _, cg := range f.Comments {
-					// Found comment on the same line as the import spec.
 					if fset.Position(cg.Pos()).Line == fset.Position(gen.TokPos).Line {
 						delcomments = append(delcomments, cg)
 						break
@@ -257,15 +255,14 @@ func DeleteNamedImport(fset *token.FileSet, f *ast.File, name, path string) (del
 					delcomments = append(delcomments, impspec.Comment)
 				}
 				for _, cg := range f.Comments {
-					// Found comment on the same line as the import spec.
-					if cg.End() < impspec.Pos() && fset.Position(cg.End()).Line == fset.Position(impspec.Pos()).Line {
+					// Remove all comments betten import ( and )
+					if cg.Pos() > gen.Lparen && cg.Pos() < gen.Rparen {
 						delcomments = append(delcomments, cg)
+					} else if cg.Pos() > gen.Rparen {
 						break
 					}
 				}
-
 				spec := gen.Specs[0].(*ast.ImportSpec)
-
 				// Move the documentation right after the import decl.
 				if spec.Doc != nil {
 					for fset.Position(gen.TokPos).Line+1 < fset.Position(spec.Doc.Pos()).Line {
