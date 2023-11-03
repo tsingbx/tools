@@ -240,7 +240,7 @@ func DeleteNamedImport(fset *token.FileSet, f *ast.File, name, path string) (del
 				// delete gen comment
 				for _, cg := range f.Comments {
 					// Found comment on the same line as the import spec.
-					if fset.Position(cg.End()).Line == fset.Position(gen.TokPos).Line {
+					if fset.Position(cg.Pos()).Line == fset.Position(gen.TokPos).Line {
 						delcomments = append(delcomments, cg)
 						break
 					}
