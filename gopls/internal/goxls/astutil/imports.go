@@ -253,11 +253,14 @@ func DeleteNamedImport(fset *token.FileSet, f *ast.File, name, path string) (del
 
 				if gen.Lparen.IsValid() {
 					// Remove comment between import ( and )
+					importSpecLine := fset.Position(gen.Pos()).Line
+					rparenLine := fset.Position(gen.Rparen).Line
 					for _, cg := range f.Comments {
-						if cg.Pos() > gen.Rparen {
+						cgLine := fset.Position(cg.Pos()).Line
+						if cgLine > rparenLine {
 							break
 						}
-						if cg.Pos() >= gen.Lparen && cg.Pos() <= gen.Rparen {
+						if cgLine >= importSpecLine && cgLine <= rparenLine {
 							delcomments = append(delcomments, cg)
 						}
 					}
