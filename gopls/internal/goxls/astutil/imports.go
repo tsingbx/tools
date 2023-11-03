@@ -234,15 +234,14 @@ func DeleteNamedImport(fset *token.FileSet, f *ast.File, name, path string) (del
 			copy(gen.Specs[j:], gen.Specs[j+1:])
 			gen.Specs = gen.Specs[:len(gen.Specs)-1]
 
-			// remove comment for impspec
-			/*
-				if impspec.Doc != nil {
-					delcomments = append(delcomments, impspec.Doc)
-				}*/
+			// remove comment before impspec
+			if impspec.Doc != nil {
+				delcomments = append(delcomments, impspec.Doc)
+			}
+			// remove comment at the same line with impspec
 			if impspec.Comment != nil {
 				delcomments = append(delcomments, impspec.Comment)
 			}
-
 			// If this was the last import spec in this decl,
 			// delete the decl, too.
 			if len(gen.Specs) == 0 {
