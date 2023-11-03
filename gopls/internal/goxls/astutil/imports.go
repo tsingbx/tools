@@ -235,9 +235,10 @@ func DeleteNamedImport(fset *token.FileSet, f *ast.File, name, path string) (del
 			gen.Specs = gen.Specs[:len(gen.Specs)-1]
 
 			// remove comment for impspec
-			if impspec.Doc != nil {
-				delcomments = append(delcomments, impspec.Doc)
-			}
+			/*
+				if impspec.Doc != nil {
+					delcomments = append(delcomments, impspec.Doc)
+				}*/
 			if impspec.Comment != nil {
 				delcomments = append(delcomments, impspec.Comment)
 			}
