@@ -245,6 +245,12 @@ func DeleteNamedImport(fset *token.FileSet, f *ast.File, name, path string) (del
 			// If this was the last import spec in this decl,
 			// delete the decl, too.
 			if len(gen.Specs) == 0 {
+
+				// Remove comment before gen decl
+				if gen.Doc != nil {
+					delcomments = append(delcomments, gen.Doc)
+				}
+
 				if gen.Lparen.IsValid() {
 					// Remove comment between import ( and )
 					for _, cg := range f.Comments {
@@ -268,41 +274,43 @@ func DeleteNamedImport(fset *token.FileSet, f *ast.File, name, path string) (del
 				f.Decls = f.Decls[:len(f.Decls)-1]
 				i--
 				break
-			} else if len(gen.Specs) == 1 {
-				spec := gen.Specs[0].(*ast.ImportSpec)
-				// Move the documentation right after the import decl.
-				if spec.Doc != nil {
-					for fset.Position(gen.TokPos).Line+1 < fset.Position(spec.Doc.Pos()).Line {
-						fset.File(gen.TokPos).MergeLine(fset.Position(gen.TokPos).Line)
-					}
-				}
-				for _, cg := range f.Comments {
-					if cg.End() < spec.Pos() && fset.Position(cg.End()).Line == fset.Position(spec.Pos()).Line {
-						for fset.Position(gen.TokPos).Line+1 < fset.Position(spec.Pos()).Line {
+			} /*else if len(gen.Specs) == 1 {
+
+					spec := gen.Specs[0].(*ast.ImportSpec)
+					// Move the documentation right after the import decl.
+					if spec.Doc != nil {
+						for fset.Position(gen.TokPos).Line+1 < fset.Position(spec.Doc.Pos()).Line {
 							fset.File(gen.TokPos).MergeLine(fset.Position(gen.TokPos).Line)
 						}
-						break
+					}
+					for _, cg := range f.Comments {
+						if cg.End() < spec.Pos() && fset.Position(cg.End()).Line == fset.Position(spec.Pos()).Line {
+							for fset.Position(gen.TokPos).Line+1 < fset.Position(spec.Pos()).Line {
+								fset.File(gen.TokPos).MergeLine(fset.Position(gen.TokPos).Line)
+							}
+							break
+						}
+					}
+			}*/
+			/*
+				if j > 0 {
+					lastImpspec := gen.Specs[j-1].(*ast.ImportSpec)
+					lastLine := fset.PositionFor(lastImpspec.Path.ValuePos, false).Line
+					line := fset.PositionFor(impspec.Path.ValuePos, false).Line
+
+					// We deleted an entry but now there may be
+					// a blank line-sized hole where the import was.
+					if line-lastLine > 1 || !gen.Rparen.IsValid() {
+						// There was a blank line immediately preceding the deleted import,
+						// so there's no need to close the hole. The right parenthesis is
+						// invalid after AddImport to an import statement without parenthesis.
+						// Do nothing.
+					} else if line != fset.File(gen.Rparen).LineCount() {
+						// There was no blank line. Close the hole.
+						fset.File(gen.Rparen).MergeLine(line)
 					}
 				}
-			}
-			if j > 0 {
-				lastImpspec := gen.Specs[j-1].(*ast.ImportSpec)
-				lastLine := fset.PositionFor(lastImpspec.Path.ValuePos, false).Line
-				line := fset.PositionFor(impspec.Path.ValuePos, false).Line
-
-				// We deleted an entry but now there may be
-				// a blank line-sized hole where the import was.
-				if line-lastLine > 1 || !gen.Rparen.IsValid() {
-					// There was a blank line immediately preceding the deleted import,
-					// so there's no need to close the hole. The right parenthesis is
-					// invalid after AddImport to an import statement without parenthesis.
-					// Do nothing.
-				} else if line != fset.File(gen.Rparen).LineCount() {
-					// There was no blank line. Close the hole.
-					fset.File(gen.Rparen).MergeLine(line)
-				}
-			}
-			j--
+				j--*/
 		}
 	}
 
