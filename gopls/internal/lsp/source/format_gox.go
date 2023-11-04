@@ -191,6 +191,7 @@ func gopComputeFixEdits(snapshot Snapshot, pgf *ParsedGopFile, options *imports.
 		// used all of origData above, use all of it here too
 		flags = 0
 	}
+	//flags = 0 // @debug
 	fixedData, err := imports.ApplyFixes(fixes, pgf.URI.Filename(), pgf.Src, options, flags)
 	if err != nil {
 		return nil, err

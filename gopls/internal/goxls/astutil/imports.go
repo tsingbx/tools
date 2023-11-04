@@ -48,17 +48,17 @@ func AddNamedImport(fset *token.FileSet, f *ast.File, name, path string) (added 
 	// whose import path has the longest shared
 	// prefix with path.
 	var (
-		bestMatch  = -1         // length of longest shared prefix
-		lastImport = -1         // index in f.Decls of the file's final import decl
-		impDecl    *ast.GenDecl // import decl containing the best match
-		impIndex   = -1         // spec index in impDecl containing the best match
+		bestMatchLen        = -1         // length of longest shared prefix
+		lastImportDeclIndex = -1         // index in f.Decls of the file's final import decl
+		bestMatchImpDecl    *ast.GenDecl // import decl containing the best match
+		bestMatchSpecIndex  = -1         // spec index in impDecl containing the best match
 
 		isThirdPartyPath = isThirdParty(path)
 	)
 	for i, decl := range f.Decls {
 		gen, ok := decl.(*ast.GenDecl)
 		if ok && gen.Tok == token.IMPORT {
-			lastImport = i
+			lastImportDeclIndex = i
 			// Do not add to import "C", to avoid disrupting the
 			// association with its doc comment, breaking cgo.
 			if declImports(gen, "C") {
@@ -66,8 +66,8 @@ func AddNamedImport(fset *token.FileSet, f *ast.File, name, path string) (added 
 			}
 
 			// Match an empty import decl if that's all that is available.
-			if len(gen.Specs) == 0 && bestMatch == -1 {
-				impDecl = gen
+			if len(gen.Specs) == 0 && bestMatchLen == -1 {
+				bestMatchImpDecl = gen
 			}
 
 			// Compute longest shared prefix with imports in this group and find best
@@ -85,10 +85,10 @@ func AddNamedImport(fset *token.FileSet, f *ast.File, name, path string) (added 
 				impspec := spec.(*ast.ImportSpec)
 				p := importPath(impspec)
 				n := matchLen(p, path)
-				if n > bestMatch || (bestMatch == 0 && !seenAnyThirdParty && isThirdPartyPath) {
-					bestMatch = n
-					impDecl = gen
-					impIndex = j
+				if n > bestMatchLen || (bestMatchLen == 0 && !seenAnyThirdParty && isThirdPartyPath) {
+					bestMatchLen = n
+					bestMatchImpDecl = gen
+					bestMatchSpecIndex = j
 				}
 				seenAnyThirdParty = seenAnyThirdParty || isThirdParty(p)
 			}
@@ -96,13 +96,14 @@ func AddNamedImport(fset *token.FileSet, f *ast.File, name, path string) (added 
 	}
 
 	// If no import decl found, add one after the last import.
-	if impDecl == nil {
-		impDecl = &ast.GenDecl{
+	if bestMatchImpDecl == nil {
+		bestMatchImpDecl = &ast.GenDecl{
 			Tok: token.IMPORT,
 		}
-		if lastImport >= 0 {
-			impDecl.TokPos = f.Decls[lastImport].End()
+		if lastImportDeclIndex >= 0 {
+			bestMatchImpDecl.TokPos = f.Decls[lastImportDeclIndex].End()
 		} else {
+
 			// There are no existing imports.
 			// Our new import, preceded by a blank line,  goes after the package declaration
 			// and after the comment, if any, that starts on the same line as the
@@ -110,43 +111,95 @@ func AddNamedImport(fset *token.FileSet, f *ast.File, name, path string) (added 
 
 			// goxls: f.Package can be NoPos
 			pos := f.Pos()
-			impDecl.TokPos = pos
+			bestMatchImpDecl.TokPos = pos
 			file := fset.File(pos)
 			pkgLine := file.Line(pos)
+			firstDeclPos := token.NoPos
+			var firstDecl ast.Decl
 			for _, c := range f.Comments {
-				if file.Line(c.Pos()) > pkgLine && f.HasPkgDecl() {
-					break
+				if f.HasPkgDecl() {
+					// jump comment at the same line with package decl.
+					if file.Line(c.Pos()) > pkgLine {
+						break
+					}
+				} else {
+					if firstDeclPos.IsValid() {
+						break
+					}
+					if len(f.Decls) > 0 {
+						// insert before first decl
+						firstDecl = f.Decls[0]
+						if firstDecl != nil {
+							switch firstDecl.(type) {
+							case *ast.GenDecl:
+								genDecl, genDeclOk := firstDecl.(*ast.GenDecl)
+								if genDeclOk {
+									if genDecl.Doc != nil {
+										firstDeclPos = genDecl.Doc.Pos()
+									} else {
+										firstDeclPos = genDecl.Pos()
+									}
+								}
+							case *ast.FuncDecl:
+								funcDecl, funcDeclOk := firstDecl.(*ast.FuncDecl)
+								if funcDeclOk {
+									if funcDecl.Doc != nil {
+										firstDeclPos = funcDecl.Doc.Pos()
+									} else {
+										firstDeclPos = funcDecl.Pos()
+									}
+								}
+							case *ast.BadDecl:
+								badDecl, badDeclOk := firstDecl.(*ast.BadDecl)
+								if badDeclOk {
+									firstDeclPos = badDecl.From
+								}
+							default:
+								// do nothing
+							}
+						}
+					} else {
+						// insert after all comment
+					}
 				}
 				// +2 for a blank line
-				impDecl.TokPos = c.End() + 2
+				bestMatchImpDecl.TokPos = c.End() + 2
+			}
+			if firstDeclPos.IsValid() {
+				file.AddLine(file.Offset(firstDeclPos))
+				bestMatchImpDecl.TokPos = firstDeclPos - 2
+			} else {
+				file.AddLine(file.Offset(bestMatchImpDecl.TokPos))
 			}
 		}
 		f.Decls = append(f.Decls, nil)
-		copy(f.Decls[lastImport+2:], f.Decls[lastImport+1:])
-		f.Decls[lastImport+1] = impDecl
+		copy(f.Decls[lastImportDeclIndex+2:], f.Decls[lastImportDeclIndex+1:])
+		f.Decls[lastImportDeclIndex+1] = bestMatchImpDecl
 	}
 
 	// Insert new import at insertAt.
 	insertAt := 0
-	if impIndex >= 0 {
+	if bestMatchSpecIndex >= 0 {
 		// insert after the found import
-		insertAt = impIndex + 1
+		insertAt = bestMatchSpecIndex + 1
 	}
-	impDecl.Specs = append(impDecl.Specs, nil)
-	copy(impDecl.Specs[insertAt+1:], impDecl.Specs[insertAt:])
-	impDecl.Specs[insertAt] = newImport
-	pos := impDecl.Pos()
+	bestMatchImpDecl.Specs = append(bestMatchImpDecl.Specs, nil)
+	copy(bestMatchImpDecl.Specs[insertAt+1:], bestMatchImpDecl.Specs[insertAt:])
+	bestMatchImpDecl.Specs[insertAt] = newImport
+	pos := bestMatchImpDecl.Pos()
+
 	if insertAt > 0 {
 		// If there is a comment after an existing import, preserve the comment
 		// position by adding the new import after the comment.
-		if spec, ok := impDecl.Specs[insertAt-1].(*ast.ImportSpec); ok && spec.Comment != nil {
+		if spec, ok := bestMatchImpDecl.Specs[insertAt-1].(*ast.ImportSpec); ok && spec.Comment != nil {
 			pos = spec.Comment.End()
 		} else {
 			// Assign same position as the previous import,
 			// so that the sorter sees it as being in the same block.
-			pos = impDecl.Specs[insertAt-1].Pos()
+			pos = bestMatchImpDecl.Specs[insertAt-1].Pos()
 		}
 	}
+
 	if newImport.Name != nil {
 		newImport.Name.NamePos = pos
 	}
@@ -154,12 +207,12 @@ func AddNamedImport(fset *token.FileSet, f *ast.File, name, path string) (added 
 	newImport.EndPos = pos
 
 	// Clean up parens. impDecl contains at least one spec.
-	if len(impDecl.Specs) == 1 {
+	if len(bestMatchImpDecl.Specs) == 1 {
 		// Remove unneeded parens.
-		impDecl.Lparen = token.NoPos
-	} else if !impDecl.Lparen.IsValid() {
+		bestMatchImpDecl.Lparen = token.NoPos
+	} else if !bestMatchImpDecl.Lparen.IsValid() {
 		// impDecl needs parens added.
-		impDecl.Lparen = impDecl.Specs[0].Pos()
+		bestMatchImpDecl.Lparen = bestMatchImpDecl.Specs[0].Pos()
 	}
 
 	f.Imports = append(f.Imports, newImport)
