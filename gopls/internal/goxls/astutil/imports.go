@@ -166,7 +166,8 @@ func AddNamedImport(fset *token.FileSet, f *ast.File, name, path string) (added 
 				bestMatchImpDecl.TokPos = c.End() + 2
 			}
 			if firstDeclPos.IsValid() {
-				file.AddLine(file.Offset(firstDeclPos))
+				file.AddLine(file.Offset(firstDeclPos)) // the new import has no comment
+				file.AddLine(file.Offset(firstDeclPos + 2))
 				bestMatchImpDecl.TokPos = firstDeclPos - 2
 			} else {
 				file.AddLine(file.Offset(bestMatchImpDecl.TokPos))
