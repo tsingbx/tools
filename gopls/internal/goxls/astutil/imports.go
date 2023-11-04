@@ -163,14 +163,19 @@ func AddNamedImport(fset *token.FileSet, f *ast.File, name, path string) (added 
 					}
 				}
 				// +2 for a blank line
-				bestMatchImpDecl.TokPos = c.End() + 2
+				bestMatchImpDecl.TokPos = c.End()
 			}
 			if firstDeclPos.IsValid() {
 				file.AddLine(file.Offset(firstDeclPos)) // the new import has no comment
-				file.AddLine(file.Offset(firstDeclPos + 2))
-				bestMatchImpDecl.TokPos = firstDeclPos - 2
+				firstDeclPos += 2
+				file.AddLine(file.Offset(firstDeclPos))
+				bestMatchImpDecl.TokPos = firstDeclPos
+				bestMatchImpDecl.TokPos += 2
 			} else {
 				file.AddLine(file.Offset(bestMatchImpDecl.TokPos))
+				bestMatchImpDecl.TokPos += 2
+				file.AddLine(file.Offset(bestMatchImpDecl.TokPos))
+				bestMatchImpDecl.TokPos += 2
 			}
 		}
 		f.Decls = append(f.Decls, nil)
