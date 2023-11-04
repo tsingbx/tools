@@ -166,17 +166,13 @@ func AddNamedImport(fset *token.FileSet, f *ast.File, name, path string) (added 
 				bestMatchImpDecl.TokPos = c.End()
 			}
 			if firstDeclPos.IsValid() {
-				file.AddLine(file.Offset(firstDeclPos)) // the new import has no comment
-				firstDeclPos += 2
-				file.AddLine(file.Offset(firstDeclPos))
 				bestMatchImpDecl.TokPos = firstDeclPos
-				bestMatchImpDecl.TokPos += 2
-			} else {
-				file.AddLine(file.Offset(bestMatchImpDecl.TokPos))
-				bestMatchImpDecl.TokPos += 2
-				file.AddLine(file.Offset(bestMatchImpDecl.TokPos))
-				bestMatchImpDecl.TokPos += 2
 			}
+			// the new import has no comment
+			file.AddLine(file.Offset(bestMatchImpDecl.TokPos))
+			bestMatchImpDecl.TokPos += 2
+			file.AddLine(file.Offset(bestMatchImpDecl.TokPos))
+			bestMatchImpDecl.TokPos += 2
 		}
 		f.Decls = append(f.Decls, nil)
 		copy(f.Decls[lastImportDeclIndex+2:], f.Decls[lastImportDeclIndex+1:])
@@ -296,9 +292,10 @@ func DeleteNamedImport(fset *token.FileSet, f *ast.File, name, path string) (del
 			gen.Specs = gen.Specs[:len(gen.Specs)-1]
 
 			// remove comment before impspec
-			if impspec.Doc != nil {
-				delcomments = append(delcomments, impspec.Doc)
-			}
+			/*
+				if impspec.Doc != nil {
+					delcomments = append(delcomments, impspec.Doc)
+				}*/
 			// remove comment at the same line with impspec
 			if impspec.Comment != nil {
 				delcomments = append(delcomments, impspec.Comment)
@@ -306,12 +303,11 @@ func DeleteNamedImport(fset *token.FileSet, f *ast.File, name, path string) (del
 			// If this was the last import spec in this decl,
 			// delete the decl, too.
 			if len(gen.Specs) == 0 {
-
 				// Remove comment before gen decl
-				if gen.Doc != nil {
-					delcomments = append(delcomments, gen.Doc)
-				}
-
+				/*
+					if gen.Doc != nil {
+						delcomments = append(delcomments, gen.Doc)
+					}*/
 				if gen.Lparen.IsValid() {
 					// Remove comment between import ( and )
 					importSpecLine := fset.Position(gen.Pos()).Line
