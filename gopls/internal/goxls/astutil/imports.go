@@ -221,6 +221,8 @@ func AddNamedImport(fset *token.FileSet, f *ast.File, name, path string) (added 
 		return true
 	}
 
+	/* have bug, it will not bring comment, because it will merge in formatFile function, so delete it.
+
 	// Merge all the import declarations into the first one.
 	var first *ast.GenDecl
 	for i := 0; i < len(f.Decls); i++ {
@@ -244,7 +246,7 @@ func AddNamedImport(fset *token.FileSet, f *ast.File, name, path string) (added 
 		f.Decls = append(f.Decls[:i], f.Decls[i+1:]...)
 		i--
 	}
-
+	*/
 	return true
 }
 
