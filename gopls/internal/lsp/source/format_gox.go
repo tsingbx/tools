@@ -16,7 +16,7 @@ import (
 	"github.com/goplus/gop/format"
 	"github.com/goplus/gop/parser"
 	"github.com/goplus/gop/token"
-	"golang.org/x/tools/gopls/internal/goxls/goputil"
+	"golang.org/x/tools/gop/goputil"
 	"golang.org/x/tools/gopls/internal/goxls/imports"
 	"golang.org/x/tools/gopls/internal/goxls/parserutil"
 	"golang.org/x/tools/gopls/internal/lsp/protocol"
@@ -25,16 +25,6 @@ import (
 	"golang.org/x/tools/internal/tokeninternal"
 )
 
-/*
-import (
-	"bytes"
-	"context"
-	"fmt"
-	"golang.org/x/tools/gopls/internal/goxls/parserutil"
-	"golang.org/x/tools/gopls/internal/lsp/protocol"
-	"golang.org/x/tools/internal/event"
-)
-*/
 // FormatGop formats a file with a given range.
 func FormatGop(ctx context.Context, snapshot Snapshot, fh FileHandle) ([]protocol.TextEdit, error) {
 	ctx, done := event.Start(ctx, "gop.Format")
@@ -217,7 +207,7 @@ func gopComputeFixEdits(snapshot Snapshot, pgf *ParsedGopFile, options *imports.
 func gopImportPrefix(src []byte) (string, error) {
 	fset := token.NewFileSet()
 	// do as little parsing as possible
-	f, err := parser.ParseFile(fset, "", src, parser.ImportsOnly|parser.ParseComments)
+	f, err := parserutil.ParseFile(fset, "", src, parser.ImportsOnly|parser.ParseComments)
 	if err != nil { // This can happen if 'package' is misspelled
 		return "", fmt.Errorf("gopImportPrefix: failed to parse: %s", err)
 	}

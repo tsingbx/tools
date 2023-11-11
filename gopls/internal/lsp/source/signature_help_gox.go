@@ -12,7 +12,7 @@ import (
 	"github.com/goplus/gop/ast"
 	"github.com/goplus/gop/token"
 
-	"golang.org/x/tools/gopls/internal/goxls/astutil"
+	"golang.org/x/tools/gop/ast/astutil"
 	"golang.org/x/tools/gopls/internal/lsp/protocol"
 	"golang.org/x/tools/internal/event"
 )
@@ -56,7 +56,6 @@ FindCall:
 				return nil, 0, fmt.Errorf("no signature help within a string literal")
 			}
 		}
-
 	}
 	if callExpr == nil || callExpr.Fun == nil {
 		return nil, 0, fmt.Errorf("cannot find an enclosing function")

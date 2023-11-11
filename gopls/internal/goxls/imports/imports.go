@@ -19,7 +19,8 @@ import (
 	"github.com/goplus/gop/parser"
 	"github.com/goplus/gop/printer"
 	"github.com/goplus/gop/token"
-	"golang.org/x/tools/gopls/internal/goxls/astutil"
+	"golang.org/x/tools/gop/ast/astutil"
+	"golang.org/x/tools/gopls/internal/goxls/parserutil"
 	"golang.org/x/tools/internal/event"
 )
 
@@ -93,7 +94,7 @@ func ApplyFixes(fixes []*ImportFix, filename string, src []byte, opt *Options, e
 	}
 	parserMode |= extraMode
 
-	file, err := parser.ParseFile(fileSet, filename, src, parserMode)
+	file, err := parserutil.ParseFile(fileSet, filename, src, parserMode)
 	if file == nil {
 		return nil, err
 	}
@@ -171,7 +172,7 @@ func parse(fset *token.FileSet, filename string, src []byte, opt *Options) (*ast
 		parserMode |= parser.AllErrors
 	}
 
-	file, err := parser.ParseFile(fset, filename, src, parserMode)
+	file, err := parserutil.ParseFile(fset, filename, src, parserMode)
 	return file, nil, err
 }
 

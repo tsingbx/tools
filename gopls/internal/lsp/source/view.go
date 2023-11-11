@@ -19,9 +19,9 @@ import (
 	"io"
 
 	goxparser "github.com/goplus/gop/parser"
+	"github.com/goplus/gop/x/typesutil"
 	"github.com/goplus/mod/gopmod"
 	goximports "golang.org/x/tools/gopls/internal/goxls/imports"
-	"golang.org/x/tools/gopls/internal/goxls/typesutil"
 
 	"golang.org/x/mod/modfile"
 	"golang.org/x/tools/go/analysis"
@@ -973,8 +973,9 @@ type Package interface {
 	GetParseErrors() []scanner.ErrorList
 
 	// goxls: Go+ files
-	CompiledNongenGoFiles() []*ParsedGoFile // (borrowed)
 	CompiledGopFiles() []*ParsedGopFile     // (borrowed)
+	CompiledNongenGoFiles() []*ParsedGoFile // (borrowed)
+	GetNongenSyntax() []*ast.File           // (borrowed)
 	GopFile(uri span.URI) (*ParsedGopFile, error)
 	GopTypesInfo() *typesutil.Info
 

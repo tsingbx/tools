@@ -9,7 +9,7 @@ import (
 	"go/types"
 
 	"github.com/goplus/gop/ast"
-	"golang.org/x/tools/gopls/internal/goxls/typesutil"
+	"github.com/goplus/gop/x/typesutil"
 	"golang.org/x/tools/gopls/internal/lsp/source"
 )
 
@@ -25,9 +25,9 @@ func newGopTypeInfo() *typesutil.Info {
 }
 
 func checkFiles(check *typesutil.Checker, goFiles []*goast.File, compiledGopFiles []*source.ParsedGopFile) error {
-	files := make([]*ast.File, 0, len(compiledGopFiles))
+	gopFiles := make([]*ast.File, 0, len(compiledGopFiles))
 	for _, cgf := range compiledGopFiles {
-		files = append(files, cgf.File)
+		gopFiles = append(gopFiles, cgf.File)
 	}
-	return check.Files(goFiles, files)
+	return check.Files(goFiles, gopFiles)
 }

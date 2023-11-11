@@ -56,7 +56,12 @@ func stub(ctx context.Context, snapshot Snapshot, si *stubmethods.StubInfo) (*to
 	}
 
 	// Parse the file declaring the concrete type.
-	declPGF, _, err := parseFull(ctx, snapshot, si.Fset, conc.Pos())
+	// goxls: maybe a Go or Go+ file
+	// declPGF, _, err := parseFull(ctx, snapshot, si.Fset, conc.Pos())
+	gopf, declPGF, _, err := gopParseFull(ctx, snapshot, si.Fset, conc.Pos())
+	if gopf != nil {
+		return gopStub(ctx, snapshot, si, conc, gopf)
+	}
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse file %q declaring implementation type: %w", declPGF.URI, err)
 	}

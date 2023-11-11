@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 
+	"golang.org/x/tools/gop/goputil"
+	"golang.org/x/tools/gop/langserver"
 	"golang.org/x/tools/gopls/internal/lsp/protocol"
 	"golang.org/x/tools/gopls/internal/lsp/source"
 	"golang.org/x/tools/gopls/internal/span"
@@ -178,6 +180,9 @@ func (s *Server) didChangeWatchedFiles(ctx context.Context, params *protocol.Did
 	ctx, done := event.Start(ctx, "lsp.Server.didChangeWatchedFiles")
 	defer done()
 
+	// goxls: Go+
+	var gopFiles []string
+
 	var modifications []source.FileModification
 	for _, change := range params.Changes {
 		uri := change.URI.SpanURI()
@@ -190,7 +195,19 @@ func (s *Server) didChangeWatchedFiles(ctx context.Context, params *protocol.Did
 			Action: action,
 			OnDisk: true,
 		})
+
+		// goxls: Go+
+		file := uri.Filename()
+		if fext := filepath.Ext(file); goputil.FileKind(fext) != goputil.FileUnknown {
+			gopFiles = append(gopFiles, file)
+		}
 	}
+
+	// goxls: Go+
+	if len(gopFiles) > 0 {
+		langserver.Changed(ctx, gopFiles...)
+	}
+
 	return s.didModifyFiles(ctx, modifications, FromDidChangeWatchedFiles)
 }
 
@@ -202,6 +219,13 @@ func (s *Server) didSave(ctx context.Context, params *protocol.DidSaveTextDocume
 	if !uri.IsFile() {
 		return nil
 	}
+
+	// goxls: Go+
+	file := uri.Filename()
+	if fext := filepath.Ext(file); goputil.FileKind(fext) != goputil.FileUnknown {
+		langserver.Changed(ctx, file)
+	}
+
 	c := source.FileModification{
 		URI:    uri,
 		Action: source.Save,

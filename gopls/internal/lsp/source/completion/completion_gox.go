@@ -20,15 +20,15 @@ import (
 	"time"
 
 	"github.com/goplus/gop/ast"
-	"github.com/goplus/gop/parser"
 	"github.com/goplus/gop/printer"
 	"github.com/goplus/gop/scanner"
 	"github.com/goplus/gop/token"
+	"github.com/goplus/gop/x/typesutil"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/tools/gop/ast/astutil"
 	"golang.org/x/tools/gopls/internal/goxls"
-	"golang.org/x/tools/gopls/internal/goxls/astutil"
-	"golang.org/x/tools/gopls/internal/goxls/typeparams"
-	"golang.org/x/tools/gopls/internal/goxls/typesutil"
+	goxlsastutil "golang.org/x/tools/gopls/internal/goxls/astutil"
+	"golang.org/x/tools/gopls/internal/goxls/parserutil"
 	"golang.org/x/tools/gopls/internal/lsp/protocol"
 	"golang.org/x/tools/gopls/internal/lsp/safetoken"
 	"golang.org/x/tools/gopls/internal/lsp/snippet"
@@ -36,6 +36,7 @@ import (
 	"golang.org/x/tools/gopls/internal/span"
 	"golang.org/x/tools/internal/event"
 	"golang.org/x/tools/internal/fuzzy"
+	"golang.org/x/tools/internal/gop/typeparams"
 	"golang.org/x/tools/internal/imports"
 )
 
@@ -2399,8 +2400,8 @@ Nodes:
 // quick partial parse. fn is non-nil only for function declarations.
 // The AST position information is garbage.
 func gopForEachPackageMember(content []byte, f func(tok token.Token, id *ast.Ident, fn *ast.FuncDecl)) {
-	purged := astutil.PurgeFuncBodies(content)
-	file, _ := parser.ParseFile(token.NewFileSet(), "", purged, 0)
+	purged := goxlsastutil.PurgeFuncBodies(content)
+	file, _ := parserutil.ParseFile(token.NewFileSet(), "", purged, 0)
 	for _, decl := range file.Decls {
 		switch decl := decl.(type) {
 		case *ast.GenDecl:

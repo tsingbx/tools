@@ -6,10 +6,11 @@ package cache
 
 import (
 	"fmt"
+	goast "go/ast"
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/tools/gopls/internal/goxls/typesutil"
+	"github.com/goplus/gop/x/typesutil"
 	"golang.org/x/tools/gopls/internal/lsp/source"
 	"golang.org/x/tools/gopls/internal/span"
 )
@@ -28,6 +29,19 @@ func (p *Package) CompiledNongenGoFiles() []*source.ParsedGoFile {
 			continue
 		}
 		ret = append(ret, f)
+	}
+	return ret
+}
+
+func (p *Package) GetNongenSyntax() []*goast.File {
+	gofs := p.pkg.compiledGoFiles
+	ret := make([]*goast.File, 0, len(gofs))
+	for _, f := range gofs {
+		fname := filepath.Base(f.URI.Filename())
+		if strings.HasPrefix(fname, "gop_autogen") {
+			continue
+		}
+		ret = append(ret, f.File)
 	}
 	return ret
 }

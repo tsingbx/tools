@@ -11,9 +11,9 @@ import (
 
 	"github.com/goplus/gop/ast"
 	"github.com/goplus/gop/token"
-	"golang.org/x/tools/go/analysis"
-	"golang.org/x/tools/gopls/internal/goxls/astutil"
-	"golang.org/x/tools/gopls/internal/goxls/typesutil"
+	"github.com/goplus/gop/x/typesutil"
+	"golang.org/x/tools/gop/analysis"
+	"golang.org/x/tools/gop/ast/astutil"
 )
 
 // GopDiagnosticForError computes a diagnostic suggesting to implement an

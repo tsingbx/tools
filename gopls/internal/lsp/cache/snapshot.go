@@ -17,6 +17,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -30,6 +31,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/types/objectpath"
+	"golang.org/x/tools/gop/goputil"
 	"golang.org/x/tools/gopls/internal/bug"
 	"golang.org/x/tools/gopls/internal/lsp/command"
 	"golang.org/x/tools/gopls/internal/lsp/filecache"
@@ -2039,6 +2041,8 @@ func (s *snapshot) clone(ctx, bgCtx context.Context, changes map[span.URI]*fileC
 		var invalidateMetadata, pkgFileChanged, importDeleted bool
 		if strings.HasSuffix(uri.Filename(), ".go") {
 			invalidateMetadata, pkgFileChanged, importDeleted = metadataChanges(ctx, s, originalFH, change.fileHandle)
+		} else if goputil.FileKind(path.Ext(uri.Filename())) != goputil.FileUnknown { // goxls: Support Go+
+			invalidateMetadata, pkgFileChanged, importDeleted = gopMetadataChanges(ctx, s, originalFH, change.fileHandle)
 		}
 
 		invalidateMetadata = invalidateMetadata || forceReloadMetadata || reinit

@@ -92,16 +92,30 @@ func parseErrorDiagnostics(pkg *syntaxPackage, errList scanner.ErrorList) ([]*so
 		return nil, fmt.Errorf("no errors in %v", errList)
 	}
 	e := errList[0]
-	pgf, err := pkg.File(span.URIFromPath(e.Pos.Filename))
-	if err != nil {
-		return nil, err
+	// goxls: check in both go & gop files
+	var (
+		pgf  *source.ParsedGoFile
+		pgpf *source.ParsedGopFile
+		uri  span.URI
+		rng  protocol.Range
+		err  error
+	)
+	pgf, err = pkg.File(span.URIFromPath(e.Pos.Filename))
+	if err == nil {
+		uri = pgf.URI
+		rng, err = pgf.Mapper.OffsetRange(e.Pos.Offset, e.Pos.Offset)
+	} else if strings.Contains(err.Error(), "no parsed file for") {
+		pgpf, err = pkg.GopFile(span.URIFromPath(e.Pos.Filename))
+		if err == nil {
+			uri = pgpf.URI
+			rng, err = pgpf.Mapper.OffsetRange(e.Pos.Offset, e.Pos.Offset)
+		}
 	}
-	rng, err := pgf.Mapper.OffsetRange(e.Pos.Offset, e.Pos.Offset)
 	if err != nil {
 		return nil, err
 	}
 	return []*source.Diagnostic{{
-		URI:      pgf.URI,
+		URI:      uri,
 		Range:    rng,
 		Severity: protocol.SeverityError,
 		Source:   source.ParseError,
@@ -428,15 +442,27 @@ func typeErrorData(pkg *syntaxPackage, terr types.Error) (typesinternal.ErrorCod
 	if !posn.IsValid() {
 		return 0, protocol.Location{}, fmt.Errorf("position %d of type error %q (code %q) not found in FileSet", start, start, terr)
 	}
-	pgf, err := pkg.File(span.URIFromPath(posn.Filename))
-	if err != nil {
-		return 0, protocol.Location{}, err
+	if strings.HasSuffix(posn.Filename, ".go") {
+		pgf, err := pkg.File(span.URIFromPath(posn.Filename))
+		if err != nil {
+			return 0, protocol.Location{}, err
+		}
+		if !end.IsValid() || end == start {
+			end = analysisinternal.TypeErrorEndPos(fset, pgf.Src, start)
+		}
+		loc, err := pgf.Mapper.PosLocation(pgf.Tok, start, end)
+		return ecode, loc, err
+	} else { // goxls: Support Go+
+		pgf, err := pkg.GopFile(span.URIFromPath(posn.Filename))
+		if err != nil {
+			return 0, protocol.Location{}, err
+		}
+		if !end.IsValid() || end == start {
+			end = analysisinternal.TypeErrorEndPos(fset, pgf.Src, start)
+		}
+		loc, err := pgf.Mapper.PosLocation(pgf.Tok, start, end)
+		return ecode, loc, err
 	}
-	if !end.IsValid() || end == start {
-		end = analysisinternal.TypeErrorEndPos(fset, pgf.Src, start)
-	}
-	loc, err := pgf.Mapper.PosLocation(pgf.Tok, start, end)
-	return ecode, loc, err
 }
 
 // spanToRange converts a span.Span to a protocol.Range, by mapping content
