@@ -9,10 +9,10 @@ import (
 	"github.com/goplus/gop/x/typesutil"
 )
 
-type dbgFlags int
+type DbgFlags int
 
 const (
-	DbgFlagTypesUtil = 1 << iota
+	DbgFlagTypesUtil DbgFlags = 1 << iota
 	DbgFlagDisableRecover
 	DbgFlagCompletion
 	DbgFlagCodeAction
@@ -23,9 +23,15 @@ const (
 	DbgFlagCodeLens
 	DbgFlagImplementation
 	DbgFlagRename
+	DbgFlagAnalysis
+
+	DbgFlagAnaFillreturns
+	DbgFlagAnaAll = DbgFlagAnaFillreturns
+
 	DbgFlagDefault = DbgFlagTypesUtil | DbgFlagCompletion | DbgFlagCodeAction | DbgFlagHover | DbgFlagHighlight |
-		DbgFlagDefinition | DbgFlagCommand | DbgFlagCodeLens | DbgFlagImplementation | DbgFlagRename
-	DbgFlagAll = DbgFlagDefault | DbgFlagDisableRecover
+		DbgFlagDefinition | DbgFlagCommand | DbgFlagCodeLens | DbgFlagImplementation | DbgFlagRename | DbgFlagAnalysis
+
+	DbgFlagAll = DbgFlagDefault | DbgFlagAnaAll | DbgFlagDisableRecover
 )
 
 const (
@@ -42,15 +48,19 @@ var (
 	DbgCodeLens       bool
 	DbgImplementation bool
 	DbgRename         bool
+	DbgAnalysis       bool
+
+	DbgAnaFillreturns bool
 )
 
-func SetDebug(flags dbgFlags) {
+func SetDebug(flags DbgFlags) {
 	if (flags & DbgFlagTypesUtil) != 0 {
 		typesutil.SetDebug(typesutil.DbgFlagDefault)
 	}
 	if (flags & DbgFlagDisableRecover) != 0 {
 		cl.SetDisableRecover(true)
 	}
+
 	DbgCompletion = (flags & DbgFlagCompletion) != 0
 	DbgHover = (flags & DbgFlagHover) != 0
 	DbgCodeAction = (flags & DbgFlagCodeAction) != 0
@@ -60,4 +70,7 @@ func SetDebug(flags dbgFlags) {
 	DbgCodeLens = (flags & DbgFlagCodeLens) != 0
 	DbgImplementation = (flags & DbgFlagImplementation) != 0
 	DbgRename = (flags & DbgFlagRename) != 0
+	DbgAnalysis = (flags & DbgFlagAnalysis) != 0
+
+	DbgAnaFillreturns = (flags & DbgFlagAnaFillreturns) != 0
 }

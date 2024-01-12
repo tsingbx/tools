@@ -1,9 +1,7 @@
-// Copyright 2020 The Go Authors. All rights reserved.
+// Copyright 2023 The GoPlus Authors (goplus.org). All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package undeclaredname defines an Analyzer that applies suggested fixes
-// to errors of the type "undeclared name: %s".
 package undeclaredname
 
 import (
@@ -31,6 +29,9 @@ var GopAnalyzer = &analysis.Analyzer{
 }
 
 func gopRun(pass *analysis.Pass) (interface{}, error) {
+	if len(pass.GopFiles) == 0 {
+		return nil, nil
+	}
 	for _, err := range pass.TypeErrors {
 		gopRunForError(pass, err)
 	}

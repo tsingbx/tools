@@ -429,6 +429,11 @@ var GeneratedAPIJSON = &APIJSON{
 							Default: "true",
 						},
 						{
+							Name:    "\"gopFillreturns\"",
+							Doc:     "suggest fixes for errors due to an incorrect number of return values\n\nThis checker provides suggested fixes for type errors of the\ntype \"wrong number of return values (want %d, got %d)\". For example:\n\tfunc m() (int, string, *bool, error) {\n\t\treturn\n\t}\nwill turn into\n\tfunc m() (int, string, *bool, error) {\n\t\treturn 0, \"\", nil, nil\n\t}\n\nThis functionality is similar to https://github.com/sqs/goreturns.\n",
+							Default: "true",
+						},
+						{
 							Name:    "\"nonewvars\"",
 							Doc:     "suggested fixes for \"no new vars on left side of :=\"\n\nThis checker provides suggested fixes for type errors of the\ntype \"no new vars on left side of :=\". For example:\n\tz := 1\n\tz := 2\nwill turn into\n\tz := 1\n\tz = 2\n",
 							Default: "true",
@@ -636,7 +641,7 @@ var GeneratedAPIJSON = &APIJSON{
 						},
 					},
 				},
-				Default:   "{\"gc_details\":false,\"generate\":true,\"regenerate_cgo\":true,\"tidy\":true,\"upgrade_dependency\":true,\"vendor\":true}",
+				Default:   "{\"gc_details\":false,\"generate\":true,\"regenerate_cgo\":true,\"run_gop_command\":true,\"tidy\":true,\"upgrade_dependency\":true,\"vendor\":true}",
 				Hierarchy: "ui",
 			},
 			{
@@ -785,6 +790,11 @@ var GeneratedAPIJSON = &APIJSON{
 			Title:   "run `go work [args...]`, and apply the resulting go.work",
 			Doc:     "edits to the current go.work file.",
 			ArgDoc:  "{\n\t\"ViewID\": string,\n\t\"InitFirst\": bool,\n\t\"Args\": []string,\n}",
+		},
+		{
+			Command: "gopls.run_gop_command",
+			Title:   "run `gop <command> [args...]`",
+			ArgDoc:  "{\n\t// URI for the directory to gop command\n\t\"URI\": string,\n\t// Command for gop command\n\t\"Command\": string,\n\t// Args for gop command arguments\n\t\"Args\": []string,\n}",
 		},
 		{
 			Command:   "gopls.run_govulncheck",
@@ -1141,6 +1151,11 @@ var GeneratedAPIJSON = &APIJSON{
 		},
 		{
 			Name:    "fillreturns",
+			Doc:     "suggest fixes for errors due to an incorrect number of return values\n\nThis checker provides suggested fixes for type errors of the\ntype \"wrong number of return values (want %d, got %d)\". For example:\n\tfunc m() (int, string, *bool, error) {\n\t\treturn\n\t}\nwill turn into\n\tfunc m() (int, string, *bool, error) {\n\t\treturn 0, \"\", nil, nil\n\t}\n\nThis functionality is similar to https://github.com/sqs/goreturns.\n",
+			Default: true,
+		},
+		{
+			Name:    "gopFillreturns",
 			Doc:     "suggest fixes for errors due to an incorrect number of return values\n\nThis checker provides suggested fixes for type errors of the\ntype \"wrong number of return values (want %d, got %d)\". For example:\n\tfunc m() (int, string, *bool, error) {\n\t\treturn\n\t}\nwill turn into\n\tfunc m() (int, string, *bool, error) {\n\t\treturn 0, \"\", nil, nil\n\t}\n\nThis functionality is similar to https://github.com/sqs/goreturns.\n",
 			Default: true,
 		},

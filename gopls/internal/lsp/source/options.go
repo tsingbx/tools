@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	goxanalysis "golang.org/x/tools/gop/analysis"
+
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/asmdecl"
 	"golang.org/x/tools/go/analysis/passes/assign"
@@ -166,6 +168,7 @@ func DefaultOptions() *Options {
 						string(command.GCDetails):         false,
 						string(command.UpgradeDependency): true,
 						string(command.Vendor):            true,
+						string(command.RunGopCommand):     true, //goxls: option
 						// TODO(hyangah): enable command.RunGovulncheck.
 					},
 				},
@@ -214,7 +217,7 @@ type Options struct {
 func (opts *Options) IsAnalyzerEnabled(name string) bool {
 	for _, amap := range []map[string]*Analyzer{opts.DefaultAnalyzers, opts.TypeErrorAnalyzers, opts.ConvenienceAnalyzers, opts.StaticcheckAnalyzers} {
 		for _, analyzer := range amap {
-			if analyzer.Analyzer.Name == name && analyzer.IsEnabled(opts) {
+			if goxanalysis.Name(analyzer.Analyzer) == name && analyzer.IsEnabled(opts) {
 				return true
 			}
 		}
@@ -1494,6 +1497,11 @@ func typeErrorAnalyzers() map[string]*Analyzer {
 		fillreturns.Analyzer.Name: {
 			Analyzer: fillreturns.Analyzer,
 			// TODO(rfindley): is SourceFixAll even necessary here? Is that not implied?
+			ActionKind: []protocol.CodeActionKind{protocol.SourceFixAll, protocol.QuickFix},
+			Enabled:    true,
+		},
+		fillreturns.GopAnalyzer.Name: { // goxls: use Go+ Analyzer
+			Analyzer:   fillreturns.GopAnalyzer,
 			ActionKind: []protocol.CodeActionKind{protocol.SourceFixAll, protocol.QuickFix},
 			Enabled:    true,
 		},

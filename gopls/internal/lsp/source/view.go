@@ -18,13 +18,14 @@ import (
 	"go/types"
 	"io"
 
+	goxast "github.com/goplus/gop/ast"
 	goxparser "github.com/goplus/gop/parser"
 	"github.com/goplus/gop/x/typesutil"
 	"github.com/goplus/mod/gopmod"
+	goxanalysis "golang.org/x/tools/gop/analysis"
 	goximports "golang.org/x/tools/gopls/internal/goxls/imports"
 
 	"golang.org/x/mod/modfile"
-	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/types/objectpath"
 	"golang.org/x/tools/gopls/internal/govulncheck"
@@ -557,9 +558,9 @@ type Metadata struct {
 	Name    PackageName
 
 	// these three fields are as defined by go/packages.Package
-	GoFiles         []span.URI
-	CompiledGoFiles []span.URI
-	IgnoredFiles    []span.URI
+	GoFiles               []span.URI
+	CompiledNongenGoFiles []span.URI // goxls: use NongenGoFiles
+	IgnoredFiles          []span.URI
 
 	// goxls: Go+ files
 	GopFiles         []span.URI
@@ -885,7 +886,7 @@ func (k FileKind) String() string {
 // Analyzer represents a go/analysis analyzer with some boolean properties
 // that let the user know how to use the analyzer.
 type Analyzer struct {
-	Analyzer *analysis.Analyzer
+	Analyzer goxanalysis.IAnalyzer // goxls: use Go+ Analyzer
 
 	// Enabled reports whether the analyzer is enabled. This value can be
 	// configured per-analysis in user settings. For staticcheck analyzers,
@@ -920,14 +921,15 @@ type Analyzer struct {
 func (a *Analyzer) String() string { return a.Analyzer.String() }
 
 // IsEnabled reports whether this analyzer is enabled by the given options.
-func (a Analyzer) IsEnabled(options *Options) bool {
+func (a *Analyzer) IsEnabled(options *Options) bool {
+	aName := goxanalysis.Name(a.Analyzer)
 	// Staticcheck analyzers can only be enabled when staticcheck is on.
-	if _, ok := options.StaticcheckAnalyzers[a.Analyzer.Name]; ok {
+	if _, ok := options.StaticcheckAnalyzers[aName]; ok {
 		if !options.Staticcheck {
 			return false
 		}
 	}
-	if enabled, ok := options.Analyses[a.Analyzer.Name]; ok {
+	if enabled, ok := options.Analyses[aName]; ok {
 		return enabled
 	}
 	return a.Enabled
@@ -967,15 +969,15 @@ type Package interface {
 
 	// Results of parsing:
 	FileSet() *token.FileSet
-	CompiledGoFiles() []*ParsedGoFile // (borrowed)
+	// CompiledGoFiles() []*ParsedGoFile // (borrowed)
+	// GetSyntax() []*ast.File // (borrowed)
+	CompiledNongenGoFiles() []*ParsedGoFile // (borrowed) - goxls: use NongenGoFiles
+	GetNongenSyntax() []*ast.File           // (borrowed)
 	File(uri span.URI) (*ParsedGoFile, error)
-	GetSyntax() []*ast.File // (borrowed)
 	GetParseErrors() []scanner.ErrorList
 
 	// goxls: Go+ files
-	CompiledGopFiles() []*ParsedGopFile     // (borrowed)
-	CompiledNongenGoFiles() []*ParsedGoFile // (borrowed)
-	GetNongenSyntax() []*ast.File           // (borrowed)
+	CompiledGopFiles() []*ParsedGopFile // (borrowed)
 	GopFile(uri span.URI) (*ParsedGopFile, error)
 	GopTypesInfo() *typesutil.Info
 
@@ -985,6 +987,14 @@ type Package interface {
 	GetTypesInfo() *types.Info
 	DependencyTypes(PackagePath) *types.Package // nil for indirect dependency of no consequence
 	DiagnosticsForFile(ctx context.Context, s Snapshot, uri span.URI) ([]*Diagnostic, error)
+}
+
+func GopSyntax(pkg Package) []*goxast.File {
+	var syntax []*goxast.File
+	for _, pgf := range pkg.CompiledGopFiles() {
+		syntax = append(syntax, pgf.File)
+	}
+	return syntax
 }
 
 type unit = struct{}
