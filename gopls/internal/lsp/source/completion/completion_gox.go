@@ -1049,9 +1049,7 @@ func (c *gopCompleter) selector(ctx context.Context, sel *ast.SelectorExpr) erro
 		log.Println("gopCompleter.selector:", sel.X, ok, "type:", tv.Type)
 	}
 	if ok {
-		// goxls: assume tv.Addressable() => true
-		// c.methodsAndFields(tv.Type, tv.Addressable(), nil, c.deepState.enqueue)
-		c.methodsAndFields(tv.Type, true, nil, c.deepState.enqueue)
+		c.methodsAndFields(tv.Type, tv.Addressable(), nil, c.deepState.enqueue)
 		if goxls.DbgCompletion {
 			log.Println("gopCompleter methodsAndFields:", len(c.items))
 		}
@@ -1287,6 +1285,23 @@ func (c *gopCompleter) selector(ctx context.Context, sel *ast.SelectorExpr) erro
 
 			cMu.Lock()
 			c.items = append(c.items, item)
+			// goxls func alias
+			if tok == token.FUNC {
+				if alias, ok := hasAliasName(id.Name); ok {
+					var noSnip bool
+					switch len(fn.Type.Params.List) {
+					case 0:
+						noSnip = true
+					case 1:
+						if fn.Recv != nil {
+							if _, ok := fn.Type.Params.List[0].Type.(*ast.Ellipsis); ok {
+								noSnip = true
+							}
+						}
+					}
+					c.items = append(c.items, cloneAliasItem(item, id.Name, alias, 0.0001, noSnip))
+				}
+			}
 			if len(c.items) >= unimportedMemberTarget {
 				atomic.StoreInt32(&enough, 1)
 			}
@@ -1296,6 +1311,7 @@ func (c *gopCompleter) selector(ctx context.Context, sel *ast.SelectorExpr) erro
 	}
 
 	// Extract the package-level candidates using a quick parse.
+	quickParseGo := c.quickParse(ctx, &cMu, &enough, sel.Sel.Name, relevances, needImport)
 	var g errgroup.Group
 	for _, path := range paths {
 		m := known[source.PackagePath(path)]
@@ -1303,6 +1319,12 @@ func (c *gopCompleter) selector(ctx context.Context, sel *ast.SelectorExpr) erro
 			uri := uri
 			g.Go(func() error {
 				return quickParse(uri, m)
+			})
+		}
+		for _, uri := range m.CompiledNongenGoFiles {
+			uri := uri
+			g.Go(func() error {
+				return quickParseGo(uri, m)
 			})
 		}
 	}
@@ -1378,13 +1400,13 @@ func (c *gopCompleter) methodsAndFields(typ types.Type, addressable bool, imp *i
 			return
 		}
 	}
-
 	for i := 0; i < mset.Len(); i++ {
 		cb(candidate{
 			obj:         mset.At(i).Obj(),
 			score:       stdScore,
 			imp:         imp,
 			addressable: addressable || isPointer(typ),
+			lookup:      mset.Lookup,
 		})
 	}
 
@@ -1409,7 +1431,7 @@ func (c *gopCompleter) lexical(ctx context.Context) error {
 		// position or embedded in interface declarations).
 		// builtinComparable = types.Universe.Lookup("comparable")
 	)
-
+	classType, isClass := parserutil.GetClassType(c.file, c.filename)
 	// Track seen variables to avoid showing completions for shadowed variables.
 	// This works since we look at scopes from innermost to outermost.
 	seen := make(map[string]struct{})
@@ -1423,6 +1445,11 @@ func (c *gopCompleter) lexical(ctx context.Context) error {
 	Names:
 		for _, name := range scope.Names() {
 			declScope, obj := scope.LookupParent(name, c.pos)
+			// Go+ class
+			if isClass && name == classType {
+				c.methodsAndFields(obj.Type(), true, nil, c.deepState.enqueue)
+				continue
+			}
 			if declScope != scope {
 				continue // Name was declared in some enclosing scope, or not at all.
 			}
@@ -2251,9 +2278,10 @@ Nodes:
 					// foo[int](<>) // <- get "int" completions instead of "T"
 					//
 					// TODO: remove this after https://go.dev/issue/52503
-					info := &typesutil.Info{Types: make(map[ast.Expr]types.TypeAndValue)}
-					typesutil.CheckExpr(c.pkg.FileSet(), c.pkg.GetTypes(), node.Fun.Pos(), node.Fun, info)
-					sig, _ = info.Types[node.Fun].Type.(*types.Signature)
+					// TODO: goxls not implement typesutil.CheckExpr
+					// info := &typesutil.Info{Types: make(map[ast.Expr]types.TypeAndValue)}
+					// typesutil.CheckExpr(c.pkg.FileSet(), c.pkg.GetTypes(), node.Fun.Pos(), node.Fun, info)
+					// sig, _ = info.Types[node.Fun].Type.(*types.Signature)
 				}
 
 				if sig != nil {
